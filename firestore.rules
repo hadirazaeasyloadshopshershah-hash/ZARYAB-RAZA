@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // SHOPKEEPERS
+    match /shopkeepers/{userId} {
+      allow create: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow read, update, delete: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    // PRODUCTS
+    match /products/{productId} {
+      allow create: if request.auth != null
+        && request.resource.data.shopkeeperId == request.auth.uid;
+
+      allow read, update, delete: if request.auth != null
+        && resource.data.shopkeeperId == request.auth.uid;
+    }
+
+    // PUBLIC STORES
+    match /publicStores/{storeId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.resource.data.storeId == storeId
+        && request.resource.data.storeId ==
+           get(
+             /databases/$(database)/documents/shopkeepers/$(request.auth.uid)
+           ).data.storeId;
+
+      allow update: if request.auth != null
+        && resource.data.storeId == storeId
+        && resource.data.storeId ==
+           get(
+             /databases/$(database)/documents/shopkeepers/$(request.auth.uid)
+           ).data.storeId;
+
+      allow delete: if request.auth != null
+        && resource.data.storeId == storeId
+        && resource.data.storeId ==
+           get(
+             /databases/$(database)/documents/shopkeepers/$(request.auth.uid)
+           ).data.storeId;
+    }
+
+    // ORDERS
+    // Customer کو اپنے Order کا updated Delivery Charge اور Total
+    // دیکھنے کے لیے public read access۔
+    match /orders/{orderId} {
+      allow create: if true;
+
+      allow read: if true;
+
+      allow update, delete: if request.auth != null;
+    }
+
+    // PUBLIC ORDER STATUS
+    match /orderStatus/{orderId} {
+      allow read: if true;
+
+      allow create, update: if request.auth != null;
+
+      allow delete: if request.auth != null;
+    }
+  }
+}
